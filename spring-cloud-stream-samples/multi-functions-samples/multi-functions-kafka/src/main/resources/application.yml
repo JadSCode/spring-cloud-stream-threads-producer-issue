@@ -1,0 +1,79 @@
+
+spring:
+  cloud:
+    stream:
+      dynamic-destination-cache-size: 1
+      function:
+        definition: generateEvents;schedulingConsumer;consumerSearch1;consumerSearch2
+      default:
+        group: search
+        contentType: application/json
+        consumer:
+          maxAttempts: 1
+          backOffMaxInterval: 30
+          retryableExceptions:
+            org.springframework.messaging.converter.MessageConversionException: false
+      kafka:
+        binder:
+          headerMapperBeanName: kafkaHeaderMapper
+          producerProperties:
+            linger.ms: 500
+            batch.size: 50000
+            compression.type: gzip
+          consumerProperties:
+            session.timeout.ms: 60000
+            max.poll.interval.ms: 600000
+            max.poll.records: 5
+            commit.interval.ms: 500
+            allow.auto.create.topics: false
+      bindings:
+        bindings:
+          generateEvents-out-0:
+            destination: schedules
+
+        schedulingConsumer-in-0:
+          destination: schedules
+          consumer.concurrency: 5
+
+        search1-out:
+          destination: search1
+          producer.message-key-expression: headers['key']
+        search2-out:
+          destination: search2
+          producer.message-key-expression: headers['key']
+
+        consumerSearch1-in-0:
+          destination: search1
+        consumerSearch2-in-0:
+          destination: search2
+
+        datasource-out:
+          destination: results
+
+management:
+  security.enabled: false
+  endpoints.web.exposure.include:
+    - prometheus
+    - health
+    - metrics
+    - bindings
+  # See https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html#actuator.endpoints.kubernetes-probes.lifecycle
+  endpoint.health.probes.enabled: true
+  health:
+    livenessState.enabled: true
+    readinessState.enabled: true
+  metrics:
+    enable:
+      kafka:
+        app.info.start.time.ms: false
+        producer: false
+        consumer: false
+        consumer.coordinator:
+          rebalance: true
+          last.rebalance: true
+          failed.rebalance: true
+        consumer.fetch.manager.records:
+          consumed: true
+          lag: true
+        consumer.time.between.poll: true
+        consumer.connection.close: true
